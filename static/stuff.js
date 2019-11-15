@@ -30,8 +30,7 @@ function updateFormCheckbox() {
 
 var meh;
 function updateTable() {
-    let tableHeader = d3.select('#tableHeader');
-    tableHeader.html('');
+    let tableHeader = d3.select('#tableHeader').html('');
 
     checkboxFields.forEach(f => {
         if (document.getElementById(f).checked) {
@@ -39,9 +38,22 @@ function updateTable() {
         }
     });
 
-    // let tableBody = d3.select('#tableBody');
-    // tableBody.html('');
+    let tableBody = d3.select('#tableBody').html('');
 
+    tableData.forEach(row => {
+        let tr = tableBody.append('tr');
+
+        checkboxFields.forEach(f => {
+            if (document.getElementById(f).checked) {
+                tr.append('td').text(row[f]);
+            }
+        });
+        // Object.keys(row).forEach(data => {
+        //     if (document.getElementById(data).checked) {
+        //         tr.append('td').text(row[data]);
+        //     }
+        // });
+    });
     // tableData.forEach(row => {
     //     meh = row;
     //     let tr = tableBody.append('tr');
