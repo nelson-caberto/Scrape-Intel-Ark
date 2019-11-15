@@ -11,18 +11,17 @@ collection = db.items
 
 @app.route('/')
 def home():
-    # test = ''
-    # data = db.items.find({'scrape':{'$eq':'Processors'}})
-    # # for i in data:
-    # #     test = i
-    # #     break
-    # # print(test)
-    # # print(data[0])
-    # test = data.next()
-    # test = [test, data.next()]
-    # print(test)
-    # return render_template("index.html", text=test)
     return render_template('index.html')
+
+@app.route('/data')
+def getData():
+    rows = []
+    data = db.items.find({"scrape":{"$eq":"Processors"}}).limit(100)
+    for row in data:
+        row.pop('_id')
+        row.pop('scrape')
+        rows.append(row)
+    return jsonify(rows)
 
 @app.route('/fields')
 def getFields():

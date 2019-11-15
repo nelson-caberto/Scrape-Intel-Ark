@@ -12,7 +12,7 @@
         <div class='row'>
             <div class='col-md-12 jumbotron'>
                 <h1>Data from Intel Ark</h1>
-                <p>Demo Project for KUEDW20190708DATA</p>
+                <p>Demo Project 2 for KUEDW20190708DATA</p>
             </div>
         </div>
         <div class='row'>
@@ -27,19 +27,25 @@
                         <h3 class='panel-title'>Available Fields</h3>
                     </div>
                     <div class='panel-body'>
-                        <div class='form-check' id='tableColumns'></div>
+                        <div class='form-check' id='tableColumns'>
+                            <!-- <input type="checkbox" class="form-check-input" id="materialUnchecked">
+                            <label class="form-check-label" for="materialUnchecked">Material unchecked</label>
+                            <br>
+                            <input type="checkbox" class="form-check-input" id="materialUnchecked2">
+                            <label class="form-check-label" for="materialUnchecked2">Material unchecked</label> -->
+                        </div>
                     </div>
                 </div>
             </div>
             <div class='col-md-9'>
                 <table class='table'>
                     <thead>
-                        <tr>
+                        <tr id='tableHeader'>
                             <th>Col 1</th>
                             <th>Col 2</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id='tableBody'>
                         <tr>
                             <td>Row 1 Col 1</td>
                             <td>Row 1 Col 2</td>
@@ -57,8 +63,4 @@
     <script src='https://d3js.org/d3.v5.min.js'></script>
     <script src="{{ url_for('static', filename='stuff.js') }}"></script>
 </body>
-
-<script>
-</script>
-
 </html>
