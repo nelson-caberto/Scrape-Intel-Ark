@@ -4,7 +4,10 @@
 <head>
   <meta charset="UTF-8">
   <title>Data from Intel ARK</title>
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <style>
+      body {overflow-y:scroll;}
+  </style>
 </head>
 
 <body>
@@ -17,10 +20,21 @@
         </div>
         <div class='row'>
             <div class='col-md-12'>
-                <h4>placeholder for visual selector</h4>
+                <div class='btn-group btn-group-toggle' data-toggle='buttons' onchange='updateVisuals()'>
+                    <label class='btn btn-secondary active'>
+                        <input type='radio' name='selectVisual' autocomplete='off' id='tableOption' checked><h4>Table</h4>
+                    </label>
+                    <label class='btn btn-secondary'>
+                        <input type='radio' name='selectVisual' autocomplete='off' id='scatterOption'><h4>Scatter</h4>
+                    </label>
+                    <label class='btn btn-secondary'>
+                        <input type='radio' name='selectVisual' autocomplete='off' id='visual3Option'><h4>Visual3</h4>
+                    </label>
+                </div>
             </div>
         </div>
-        <div class='row'>
+        <div class='row'><br></div>
+        <div class='row' id='visualtableOption'>
             <div class='col-md-3'>
                 <div class='panel panel-primary'>
                     <div class='panel-heading'>
@@ -31,7 +45,7 @@
                     </div>
                 </div>
             </div>
-            <div class='col-md-9'>
+            <div class='col'>
                 <table class='table'>
                     <thead>
                         <tr id='tableHeader'></tr>
@@ -40,9 +54,34 @@
                 </table>
             </div>
         </div>
-
+        <div class='row' id='visualscatterOption'>
+            <div class='col-md-12'>
+                <p>Scatter</p>
+            </div>
+        </div>
+        <div class='row' id='visualvisual3Option'>
+            <div class='col-md-12'>
+                <p>Visual3</p>
+            </div>
+        </div>       
     </div>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
     <script src='https://d3js.org/d3.v5.min.js'></script>
-    <script src="{{ url_for('static', filename='stuff.js') }}"></script>
+    <script src="{{ url_for('static', filename='table.js') }}"></script>
+    <script src="{{ url_for('static', filename='scatter.js') }}"></script>
+    <script>
+        function updateVisuals() {
+            let selected = d3.select('input[name="selectVisual"]:checked').attr('id');
+            d3.select('#visualtableOption').style('display','none');
+            d3.select('#visualscatterOption').style('display','none');
+            d3.select('#visualvisual3Option').style('display','none');
+            d3.select('#visual'.concat(selected)).style('display','flex');
+            // d3.select('table').style('display','table');
+        }
+        document.getElementById('visualscatterOption').style.display = 'none';
+        document.getElementById('visualvisual3Option').style.display = 'none';
+    </script>
 </body>
 </html>

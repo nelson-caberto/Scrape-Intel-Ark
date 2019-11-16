@@ -48,21 +48,7 @@ function updateTable() {
                 tr.append('td').text(row[f]);
             }
         });
-        // Object.keys(row).forEach(data => {
-        //     if (document.getElementById(data).checked) {
-        //         tr.append('td').text(row[data]);
-        //     }
-        // });
     });
-    // tableData.forEach(row => {
-    //     meh = row;
-    //     let tr = tableBody.append('tr');
-
-    //     Object.keys(row).forEach(data => {
-    //         // tr.append('td').text(row[data]);
-    //         console.log(row[data])
-    //     });
-    // });
 }
 
 function saveTableData(data) {
