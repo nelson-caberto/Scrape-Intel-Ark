@@ -25,10 +25,9 @@ function insertFormCheckboxOptions(data) {
 }
 
 function updateFormCheckbox() {
-    checkboxFields = d3.json('/fields').then(insertFormCheckboxOptions);
+    d3.json('/fields').then(insertFormCheckboxOptions);
 }
 
-var meh;
 function updateTable() {
     let tableHeader = d3.select('#tableHeader').html('');
 
@@ -59,5 +58,3 @@ function getTableData() {
     d3.json('/data').then(saveTableData);
 }
 
-updateFormCheckbox();
-getTableData();

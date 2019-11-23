@@ -4,9 +4,23 @@
 <head>
   <meta charset="UTF-8">
   <title>Data from Intel ARK</title>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='jquery-ui.css') }}">
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <!-- <script type='text/javascript' src="{{ url_for('static', filename='jquery-3.4.1.min.js') }}"></script> -->
+  <script
+  src="https://code.jquery.com/jquery-1.12.4.min.js"
+  integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ="
+  crossorigin="anonymous"></script>
+  <script
+  src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"
+  integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU="
+  crossorigin="anonymous"></script>
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-ui-Slider-Pips/1.11.4/jquery-ui-slider-pips.min.js"></script> -->
+  <!-- <script type='text/javascript' src="{{ url_for('static', filename='jquery-ui.min.js') }}"></script> -->
+  <script type='text/javascript' src="{{ url_for('static', filename='gl-matrix-min.js') }}"></script>
+
   <style>
-      body {overflow-y:scroll;}
+    body {overflow-y:scroll;}
   </style>
 </head>
 
@@ -18,7 +32,7 @@
                 <p>Demo Project 2 for KUEDW20190708DATA</p>
             </div>
         </div>
-        <div class='row'>
+        <div class='row' id='whichvisual'>
             <div class='col-md-12'>
                 <div class='btn-group btn-group-toggle' data-toggle='buttons' onchange='updateVisuals()'>
                     <label class='btn btn-secondary active'>
@@ -54,14 +68,862 @@
                 </table>
             </div>
         </div>
-        <div class='row' id='visualscatterOption'>
-            <div class='col-md-12'>
-                <p>Scatter</p>
+        <div class='container' id='visualscatterOption' onchange='scatterStuff()'>
+            <div class='row form-group'>
+                <div class='col'>
+                    <label for='xselect'>x-axis</label>
+                    <select class='form-control' id='xselect'></select>        
+                </div>
+                <div class='col'>
+                    <label for='yselect'>y-axis</label>
+                    <select class='form-control' id='yselect'></select>        
+                </div>
+                <div class='w-100'></div>
+                <div class='col-md-12'>
+                    <!-- <img src='https://picsum.photos/500/400?random=1'> -->
+                    <div id='scatter'></div>
+                </div>            
             </div>
         </div>
         <div class='row' id='visualvisual3Option'>
             <div class='col-md-12'>
-                <p>Visual3</p>
+                <table>
+                    <tr>
+                        <td>
+                            <canvas id="canvas" style="border: none;" width="500" height="500"></canvas>
+                            </td>
+                        <td>
+                            &nbsp;
+                            </td>
+                        <td>
+                            Animation<button id="animationtoggle" type="button">Disable</button><br>
+                            Rotate N
+                            <button id="nanglep" type="button">+</button>
+                            <button id="nanglem" type="button">-</button>
+                            <button id="nanimationtoggle" type="button">Disable</button>
+                            <div id="nangleslider"></div><br>
+                            Rotate T
+                            <button id="tanglep" type="button">+</button>
+                            <button id="tanglem" type="button">-</button>
+                            <button id="tanimationtoggle" type="button">Disable</button><br>
+                            <div id="tangleslider"></div><br>
+                            Rotate C
+                            <button id="canglep" type="button">+</button>
+                            <button id="canglem" type="button">-</button>
+                            <button id="canimationtoggle" type="button">Disable</button><br>
+                            <div id="cangleslider"></div><br>
+        <!--                    Camera Location<br>
+                            <button id="front" type="button">Front</button>
+                            <button id="back" type="button">Back</button><br>
+                            <button id="left" type="button">Left</button>
+                            <button id="right" type="button">Right</button><br>
+                            <button id="top" type="button">Top</button>
+                            <button id="bottom" type="button">Bottom</button><br> -->
+                            </td>
+                        </tr>
+                </table>
+                <script id="shader-vs" type="x-shader/x-vertex">
+                    attribute vec3 aVertexPosition;
+                    attribute vec4 aVertexColor;
+                    
+                    uniform mat4 uMVMatrix;
+                    uniform mat4 uPMatrix;
+                    
+                    varying vec4 vColor;
+                    
+                    void main(void) {
+                        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+                        vColor = aVertexColor;
+                    }
+                </script>
+    
+                <script id="shader-fs" type="x-shader/x-fragment">
+                    precision mediump float;
+                    
+                    varying vec4 vColor;
+                    
+                    void main(void) {
+                        gl_FragColor = vColor;
+                    }
+                </script>
+                
+                <script type="text/javascript">
+                    var gl;
+                    
+                    function initGL(canvas) {
+                        try {
+                            gl = canvas.getContext("experimental-webgl");
+                            gl.viewportWidth = canvas.width;
+                            gl.viewportHeight = canvas.height;
+                        } catch (e) {
+                        }
+                        if (!gl) {
+                            alert("Could not initialise WebGL, sorry :-(");
+                        }
+                    }
+                    
+                    
+                    function getShader(gl, id) {
+                        var shaderScript = document.getElementById(id);
+                        if (!shaderScript) {
+                            return null;
+                        }
+                        
+                        var str = "";
+                        var k = shaderScript.firstChild;
+                        while (k) {
+                            if (k.nodeType == 3) {
+                                str += k.textContent;
+                            }
+                            k = k.nextSibling;
+                        }
+                        
+                        var shader;
+                        if (shaderScript.type == "x-shader/x-fragment") {
+                            shader = gl.createShader(gl.FRAGMENT_SHADER);
+                        } else if (shaderScript.type == "x-shader/x-vertex") {
+                            shader = gl.createShader(gl.VERTEX_SHADER);
+                        } else {
+                            return null;
+                        }
+                        
+                        gl.shaderSource(shader, str);
+                        gl.compileShader(shader);
+                        
+                        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                            alert(gl.getShaderInfoLog(shader));
+                            return null;
+                        }
+                        
+                        return shader;
+                    }
+                    
+                    
+                    var shaderProgram;
+                    
+                    function initShaders() {
+                        var fragmentShader = getShader(gl, "shader-fs");
+                        var vertexShader = getShader(gl, "shader-vs");
+                        
+                        shaderProgram = gl.createProgram();
+                        gl.attachShader(shaderProgram, vertexShader);
+                        gl.attachShader(shaderProgram, fragmentShader);
+                        gl.linkProgram(shaderProgram);
+                        
+                        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                            alert("Could not initialise shaders");
+                        }
+                        
+                        gl.useProgram(shaderProgram);
+                        
+                        shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+                        gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+                        
+                        shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+                        gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+                        
+                        shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+                        shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+                    }
+                    
+                    var mvMatrix = mat4.create();
+                    var pMatrix = mat4.create();
+                    
+                    function setMatrixUniforms() {
+                        gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+                        gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+                    }
+                                    
+                    function Array2Buffer(array, iSize, nSize) {
+                        buffer = gl.createBuffer();
+                        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+                        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(array), gl.STATIC_DRAW);
+                        buffer.itemSize = iSize;
+                        buffer.numItems = nSize;
+                        return buffer;
+                    }
+    
+                    var speed = 2;
+                    function mod(a, b) {
+                        if (a != b && Math.abs(a-b) < .001) return a;
+                        else if (a < b)                     return a +=(speed/2)*(b-a)*elapsed;
+                        else if (a > b)                     return a -=(speed/2)*(a-b)*elapsed;
+                    }
+                    
+                    var cubeVPB;
+                    var cubeVCB;
+                    var axisVPB;
+                    var axisVCB;
+                    var pyrdVPB;
+                    var pyrdVCBR;
+                    var pyrdVCBG;
+                    var pyrdVCBB;
+                    var nVPB;
+                    var nVCB;
+                    var tVPB;
+                    var tVCB;
+                    var cVPB;
+                    var cVCB;
+    
+                    function initCube() {
+                        var vertices = [
+                                        1, 1, 1,
+                                        1, 1, -1,
+                                        -1, 1, 1,
+                                        -1, 1, -1,
+                                        1, -1, 1,
+                                        1, -1, -1,
+                                        -1, -1, 1,
+                                        -1, -1, -1
+                                        ];
+                        var colors = [
+                                      1, 1, 1, 1,
+                                      1, 1, 1, 1,
+                                      1, 1, 1, 1,
+                                      1, 1, 1, 1,
+                                      1, 1, 1, 1,
+                                      1, 1, 1, 1,
+                                      1, 1, 1, 1,
+                                      1, 1, 1, 1
+                                      ];
+                        cubeVPB = Array2Buffer(vertices, 3, 8);
+                        cubeVCB = Array2Buffer(colors, 4, 8);
+                    }
+                    
+                    function initAxis() {
+                        var vertices = [
+                                        -1, 0, 0,
+                                        1, 0, 0,
+                                        0, -1, 0,
+                                        0, 1, 0,
+                                        0, 0, -1,
+                                        0, 0, 1
+                                        ];
+                        var colors = [
+                                      1, 0, 0, 1,
+                                      1, 0, 0, 1,
+                                      0, 1, 0, 1,
+                                      0, 1, 0, 1,
+                                      0, 0, 1, 1,
+                                      0, 0, 1, 1
+                                      ];
+                        axisVPB = Array2Buffer(vertices, 3, 6);
+                        axisVCB = Array2Buffer(colors, 4, 6);
+                    }
+                    
+                    function initPyrd() {
+                        var vertices = [
+                                        // Front face
+                                        0.0, 1.0, 0.0,
+                                        -1.0, -1.0, 1.0,
+                                        1.0, -1.0, 1.0,
+                                        // Right face
+                                        0.0, 1.0, 0.0,
+                                        1.0, -1.0, 1.0,
+                                        1.0, -1.0, -1.0,
+                                        // Back face
+                                        0.0, 1.0, 0.0,
+                                        1.0, -1.0, -1.0,
+                                        -1.0, -1.0, -1.0,
+                                        // Left face
+                                        0.0, 1.0, 0.0,
+                                        -1.0, -1.0, -1.0,
+                                        -1.0, -1.0, 1.0
+                                        ];
+                        var R = [
+                                 1, 0, 0, 1,
+                                 1, 0, 0, 1,
+                                 1, 0, 0, 1,
+                                 1, 0, 0, 1,
+                                 1, 0, 0, 1,
+                                 1, 0, 0, 1,
+                                 1, 0, 0, 1,
+                                 1, 0, 0, 1,
+                                 1, 0, 0, 1,
+                                 1, 0, 0, 1,
+                                 1, 0, 0, 1,
+                                 1, 0, 0, 1
+                                 ];
+                        var G = [
+                                 0, 1, 0, 1,
+                                 0, 1, 0, 1,
+                                 0, 1, 0, 1,
+                                 0, 1, 0, 1,
+                                 0, 1, 0, 1,
+                                 0, 1, 0, 1,
+                                 0, 1, 0, 1,
+                                 0, 1, 0, 1,
+                                 0, 1, 0, 1,
+                                 0, 1, 0, 1,
+                                 0, 1, 0, 1,
+                                 0, 1, 0, 1
+                                 ];
+                        var B = [
+                                 0, 0, 1, 1,
+                                 0, 0, 1, 1,
+                                 0, 0, 1, 1,
+                                 0, 0, 1, 1,
+                                 0, 0, 1, 1,
+                                 0, 0, 1, 1,
+                                 0, 0, 1, 1,
+                                 0, 0, 1, 1,
+                                 0, 0, 1, 1,
+                                 0, 0, 1, 1,
+                                 0, 0, 1, 1,
+                                 0, 0, 1, 1
+                                 ];
+                        pyrdVPB = Array2Buffer(vertices, 3, 12);
+                        pyrdVCBR = Array2Buffer(R, 4, 12);
+                        pyrdVCBG = Array2Buffer(G, 4, 12);
+                        pyrdVCBB = Array2Buffer(B, 4, 12);
+                    }
+                    
+                    function initN() {
+                        var v = [
+                                 .2, 0, 0,
+                                 0, 0, 0,
+                                 .1, .1, .15,
+                                 0, 1.1, 0,
+                                 .1, 1, .15,
+                                 .2, 1.1, 0,
+                                 .1, .7, .15,
+                                 .2, 1, 0,
+                                 .2, .9, .15,
+                                 .3, 1.1, 0,
+                                 .3, 1, .15,
+                                 .5, 1.2, 0,
+                                 .5, 1.1, .15,
+                                 .8, 1.2, 0,
+                                 .7, 1.1, .15,
+                                 1, 1, 0,
+                                 .9, .9, .15,
+                                 1.1, .8, 0,
+                                 1, .7, .15,
+                                 1.1, 0, 0,
+                                 1, .1, .15,
+                                 .9, 0, 0,
+                                 1, .7, .15,
+                                 .9, .7, 0,
+                                 .9, .9, .15,
+                                 .7, 1, 0,
+                                 .7, 1.1, .15,
+                                 .5, 1, 0,
+                                 .5, 1.1, .15,
+                                 .3, .9, 0,
+                                 .3, 1, .15,
+                                 .2, .7, 0,
+                                 .2, .9, .15,
+                                 
+                                 .2, 0, 0,
+                                 .1, .1, .15,
+                                 .2, .7, 0,
+                                 .1, .7, .15,
+                                 .2, .9, .15,
+                                 ];
+                        var c = [
+                                 .4, .4, .8, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 .4, .4, .8, 1,
+                                 0, 0, .5, 1,
+                                 0, 0, .5, 1,
+                                 ];
+                        nVPB = Array2Buffer(v, 3, 33+5);
+                        nVCB = Array2Buffer(c, 4, 33+5);
+                    }
+                    
+                    function initT() {
+                        var v = [
+                                 .8, .2, 0,
+                                 .8, 0, 0,
+                                 .7, .1, .15,
+                                 .7, 0, 0,
+                                 .5, .2, .15,
+                                 .4, .2, 0,
+                                 .4, .4, .15,
+                                 .3, .4, 0,
+                                 .4, 1.1, .15,
+                                 .3, 1, 0,
+                                 .1, 1.1, .15,
+    
+                                 0, 1, 0,
+    
+                                 0, 1.2, 0,
+                                 .1, 1.1, .15,
+                                 .3, 1.2, 0,
+                                 .4, 1.1, .15,
+                                 .3, 1.5, 0,
+                                 .4, 1.4, .15,
+                                 .5, 1.5, 0,
+                                 .4, 1.1, .15,
+                                 .5, 1.2, 0,
+                                 .7, 1.1, .15,
+                                 .8, 1.2, 0,
+                                 .7, 1.1, .15,
+                                 
+                                 .8, 1, 0,
+                                 .4, 1.1, .15,
+                                 .5, 1, 0,
+                                 .4, .4, .15,
+                                 .5, .4, 0,
+                                 .5, .2, .15,
+                                 .6, .3, 0,
+                                 .7, .1, .15,
+                                 .8, .2, 0,
+                                 ];
+                        var c = [
+                                 .8, .4, .4, 1,
+                                 .8, .4, .4, 1,
+                                 .5, 0, 0, 1,
+                                 .8, .4, .4, 1,
+                                 .5, 0, 0, 1,
+                                 .8, .4, .4, 1,
+                                 .5, 0, 0, 1,
+                                 .8, .4, .4, 1,
+                                 .5, 0, 0, 1,
+                                 .8, .4, .4, 1,
+                                 .5, 0, 0, 1,
+                                 .8, .4, .4, 1,
+                                 .8, .4, .4, 1,
+                                 
+                                 .5, 0, 0, 1,
+                                 .8, .4, .4, 1,
+                                 .5, 0, 0, 1,
+                                 .8, .4, .4, 1,
+                                 .5, 0, 0, 1,
+                                 .8, .4, .4, 1,
+                                 .5, 0, 0, 1,
+                                 .8, .4, .4, 1,
+                                 .5, 0, 0, 1,
+                                 .8, .4, .4, 1,
+                                 .5, 0, 0, 1,
+    
+                                 .8, .4, .4, 1,
+                                 .5, 0, 0, 1,
+                                 .8, .4, .4, 1,
+                                 .5, 0, 0, 1,
+                                 .8, .4, .4, 1,
+                                 .5, 0, 0, 1,
+                                 .8, .4, .4, 1,
+                                 .5, 0, 0, 1,
+                                 .8, .4, .4, 1,
+                                 
+                                 ];
+                        tVPB = Array2Buffer(v, 3, 12+12+9);
+                        tVCB = Array2Buffer(c, 4, 12+12+9);
+                    }
+                    
+                    function initC() {
+                        var v = [
+                                 1.1, .4, 0,
+                                 1.2, .3, 0,
+                                 1.1, .3, .15,
+                                 .7, 0, 0,
+                                 .7, .1, .15,
+                                 .5, 0, 0,
+                                 .5, .1, .15,
+                                 .1, .1, 0,
+                                 .2, .2, .15,
+                                 0, .3, 0,
+                                 .1, .4, .15,
+                                 0, .7, 0,
+                                 .1, .6, .15,
+                                 .1, .9, 0,
+                                 .2, .8, .15,
+                                 .6, 1.3, 0,
+                                 .6, 1.2, .15,
+                                 .8, 1.4, 0,
+                                 .8, 1.3, .15,
+                                 1, 1.4, 0,
+                                 .9, 1.3, .15,
+                                 1.1, 1.2, 0,
+                                 1, 1.2, .15,
+                                 1, 1.1, 0,
+                                 .9, 1.3, .15,
+                                 .9, 1.2, 0,
+                                 .8, 1.3, .15,
+                                 .8, 1.2, 0,
+                                 .6, 1.2, .15,
+                                 .5, .9, 0,
+                                 .2, .8, .15,                             
+                                 .3, .7, 0,
+                                 .1, .6, .15,
+                                 .2, .5, 0,
+                                 .1, .4, .15,
+                                 .2, .4, 0,
+                                 .2, .2, .15,
+                                 .5, .2, 0,
+                                 .5, .1, .15,
+                                 .7, .2, 0,
+                                 .7, .1, .15,
+                                 1.1, .4, 0,
+                                 1.1, .3, .15
+                                 ];
+                        var c = [
+                                 .4, .8, .4, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 .4, .8, .4, 1,
+                                 0, .5, 0, 1,
+                                 ];
+                        cVPB = Array2Buffer(v, 3, 43);
+                        cVCB = Array2Buffer(c, 4, 43);
+                    }
+                    
+                    function initBuffers() {
+                        initCube();
+                        initAxis();
+                        initPyrd();
+                        initN();
+                        initT();
+                        initC();
+                    }
+                    
+                    var mvMatrixStack = [];
+                    
+                    function mvPushMatrix() {
+                        var copy = mat4.create();
+                        mat4.set(mvMatrix, copy);
+                        mvMatrixStack.push(copy);
+                    }
+                    
+                    function mvPopMatrix() {
+                        if (mvMatrixStack.length == 0) {
+                            throw "Invalid popMatrix!";
+                        }
+                        mvMatrix = mvMatrixStack.pop();
+                    }
+                    
+                    function drawBuffer(vpbuf, vcbuf, start, nitems, gltype) {
+                        gl.bindBuffer(gl.ARRAY_BUFFER, vpbuf);
+                        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vpbuf.itemSize, gl.FLOAT, false, 0, 0);
+                        gl.bindBuffer(gl.ARRAY_BUFFER, vcbuf);
+                        gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, vcbuf.itemSize, gl.FLOAT, false, 0, 0);
+                        setMatrixUniforms();
+                        gl.drawArrays(gltype, start, nitems);
+                    }
+                    
+                    function drawCube() {
+                        drawBuffer(cubeVPB, cubeVCB, 0, cubeVPB.numItems, gl.LINES);
+                        mat4.rotateX(mvMatrix, Math.PI/2);
+                        drawBuffer(cubeVPB, cubeVCB, 0, cubeVPB.numItems, gl.LINES);
+                        mat4.rotateY(mvMatrix, Math.PI/2);
+                        drawBuffer(cubeVPB, cubeVCB, 0, cubeVPB.numItems, gl.LINES);                    
+                    }
+                    
+                    function drawPyrd() {
+                        mat4.rotateZ(mvMatrix, -Math.PI/2);
+                        mat4.translate(mvMatrix, [0, 1, 0]);
+                        mat4.scale(mvMatrix, [1/32, 1/16, 1/32]);
+                        mat4.translate(mvMatrix, [0, -1, 0]);
+                        drawBuffer(pyrdVPB, pyrdVCBR, 0, pyrdVPB.numItems, gl.TRIANGLES);
+                        
+                        mat4.identity(mvMatrix);
+                        mat4.translate(mvMatrix, [0, 1, 0]);
+                        mat4.scale(mvMatrix, [1/32, 1/16, 1/32]);
+                        mat4.translate(mvMatrix, [0, -1, 0]);
+                        drawBuffer(pyrdVPB, pyrdVCBG, 0, pyrdVPB.numItems, gl.TRIANGLES);
+                        
+                        mat4.identity(mvMatrix);
+                        mat4.rotateX(mvMatrix, Math.PI/2);
+                        mat4.translate(mvMatrix, [0, 1, 0]);
+                        mat4.scale(mvMatrix, [1/32, 1/16, 1/32]);
+                        mat4.translate(mvMatrix, [0, -1, 0]);
+                        drawBuffer(pyrdVPB, pyrdVCBB, 0, pyrdVPB.numItems, gl.TRIANGLES);
+                    }
+    
+                    var pMatrixr = 0;
+                    var pMatrixrN = 0;
+                    var pMatrixrT = 0;
+                    var pMatrixrC = 0;
+                    var pMatrixrDelta = degrees2radian(1);
+                    
+                    var pMatrixNext;
+                                    
+                    function drawScene() {
+                        gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+                        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                        
+                        mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+                        
+    //                    mat4.lookAt([0,0,1],[0,0,1],[0,1,0],pMatrix);
+                        pMatrixr += degrees2radian(1);
+                        //camera
+                        mat4.translate(pMatrix, [0, .25, -4]);
+    //                    mat4.rotateX(pMatrix, Math.PI/5);//Math.atan(Math.sin(Math.PI/4)));
+                        mat4.rotateX(pMatrix, degrees2radian(15));
+                        mat4.rotateY(pMatrix, pMatrixr*.1);
+                        //end camera
+    
+                        mat4.identity(mvMatrix);
+                        
+                        drawCube();
+                        
+                        mat4.identity(mvMatrix);
+                        drawBuffer(axisVPB, axisVCB, 0, axisVPB.numItems, gl.LINES);
+                        
+                        mat4.identity(mvMatrix);
+                        drawPyrd();
+                        
+                        mat4.identity(mvMatrix);
+    
+                        mvPushMatrix();
+                        mat4.translate(mvMatrix, [-.5, .5, .5]);
+                        mat4.rotateY(mvMatrix, pMatrixrN);
+                        mat4.scale(mvMatrix, [.5, .5, .5]);
+                        mat4.translate(mvMatrix, [-.55, -.6, 0]);
+                        drawBuffer(nVPB, nVCB, 0, 33, gl.TRIANGLE_STRIP);
+                        drawBuffer(nVPB, nVCB, 33, 5, gl.TRIANGLE_STRIP);
+                        mvPopMatrix();
+                        
+                        mvPushMatrix();
+                        mat4.translate(mvMatrix, [.5, .575, -.5]);
+                        mat4.scale(mvMatrix, [.5, .5, .5]);
+                        mat4.rotateX(mvMatrix, pMatrixrT);
+                        mat4.translate(mvMatrix, [-.4, -.75, 0]);
+                        drawBuffer(tVPB, tVCB, 0, 12, gl.TRIANGLE_STRIP);
+                        drawBuffer(tVPB, tVCB, 11, 12, gl.TRIANGLE_STRIP);
+                        drawBuffer(tVPB, tVCB, 22, tVPB.numItems-22, gl.TRIANGLE_STRIP);
+                        mvPopMatrix();
+                        
+                        mvPushMatrix();
+                        mat4.translate(mvMatrix, [.5, -.5, .5]);
+                        mat4.scale(mvMatrix, [.5, .5, .5]);
+                        mat4.rotateZ(mvMatrix, pMatrixrC);
+                        mat4.translate(mvMatrix, [-.6, -.7, 0]);
+                        drawBuffer(cVPB, cVCB, 0, cVPB.numItems, gl.TRIANGLE_STRIP);
+                        mvPopMatrix();
+                    }
+    
+                    var lastTime = 0;
+                    var elapsed;
+                    
+                    var animateNbool = 1;
+                    var animateTbool = 1;
+                    var animateCbool = 1;
+    
+                    function animate() {
+                        var timeNow = new Date().getTime();
+                        if (lastTime != 0) {
+                            elapsed = timeNow - lastTime;
+                        }
+                        lastTime = timeNow;
+                        if (animateCbool === 1) {
+                            if (pMatrixrC < Math.PI*2 && pMatrixrC >= 0){
+                                pMatrixrC += pMatrixrDelta;
+                            }
+                            else {
+                                pMatrixrC = 0;
+                            }
+                            $('#cangleslider').slider('option','value',pMatrixrC*180/Math.PI)
+                        }
+                        if (animateTbool === 1) {
+                            if (pMatrixrT < Math.PI*2 && pMatrixrT >= 0){
+                                pMatrixrT += pMatrixrDelta;
+                            }
+                            else {
+                                pMatrixrT = 0;
+                            }
+                            $('#tangleslider').slider('option','value',pMatrixrT*180/Math.PI)
+                        }
+                        if (animateNbool === 1) {
+                            if (pMatrixrN < Math.PI*2 && pMatrixrN >= 0){
+                                pMatrixrN += pMatrixrDelta;
+                            }
+                            else {
+                                pMatrixrN = 0;
+                            }
+                            $('#nangleslider').slider('option','value',pMatrixrN*180/Math.PI)
+                        }
+                    }
+                    
+                    var animationBool = 1;
+                    function render() {
+                        if (animationBool === 1) {
+                            requestAnimFrame(render);
+                        }
+                        drawScene();
+                        animate();
+                    }
+                    
+                    //pulled from webgl-utils.js
+                    window.requestAnimFrame = (function() {
+                                               return window.requestAnimationFrame ||
+                                               window.webkitRequestAnimationFrame ||
+                                               window.mozRequestAnimationFrame ||
+                                               window.oRequestAnimationFrame ||
+                                               window.msRequestAnimationFrame ||
+                                               function(/* function FrameRequestCallback */ callback, /* DOMElement Element */ element) {
+                                               return window.setTimeout(callback, 1000/60);
+                                               };
+                                               })();
+    
+                    function webGLStart() {
+                        var canvas = document.getElementById("canvas");
+                        initGL(canvas);
+                        initShaders()
+                        initBuffers();
+                        
+                        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+                        gl.enable(gl.DEPTH_TEST);
+                        
+                        render();
+                    }
+                    
+                    function degrees2radian(d) {
+                        return d*Math.PI/180;
+                    }
+                    
+                    function visual3Stuff() {
+                        $('#nangleslider').slider({animate:true,max:359,min:0});
+                        $('#tangleslider').slider({animate:true,max:359,min:0});
+                        $('#cangleslider').slider({animate:true,max:359,min:0});
+                        
+                        $('#nanglep').click(function(e){
+                                            pMatrixrN += degrees2radian(10);
+                                            drawScene();
+                                            $('#nangleslider').slider('option','value',pMatrixrN*180/Math.PI)
+                                            });
+                        $('#nanglem').click(function(e){
+                                            pMatrixrN -= degrees2radian(10);
+                                            drawScene();
+                                            $('#nangleslider').slider('option','value',pMatrixrN*180/Math.PI)
+                                            });
+                        $('#tanglep').click(function(e){
+                                            pMatrixrT += degrees2radian(10);
+                                            drawScene();
+                                            $('#tangleslider').slider('option','value',pMatrixrT*180/Math.PI)
+                                            });
+                        $('#tanglem').click(function(e){
+                                            pMatrixrT -= degrees2radian(10);
+                                            drawScene();
+                                            $('#tangleslider').slider('option','value',pMatrixrT*180/Math.PI)
+                                            });
+                        $('#canglep').click(function(e){
+                                            pMatrixrC += degrees2radian(10);
+                                            drawScene();
+                                            $('#cangleslider').slider('option','value',pMatrixrC*180/Math.PI)
+                                            });
+                        $('#canglem').click(function(e){
+                                            pMatrixrC -= degrees2radian(10);
+                                            drawScene();
+                                            $('#cangleslider').slider('option','value',pMatrixrC*180/Math.PI)
+                                            });
+                        $('#animationtoggle').click(function(e){
+                                                    if (animationBool === 0) {
+                                                    animationBool = 1;
+                                                    render();
+                                                    $(e.currentTarget).html("Disable");
+                                                    }
+                                                    else {
+                                                    animationBool = 0;
+                                                    $(e.currentTarget).html("Enable");
+                                                    }
+                                                    });
+                        $('#nanimationtoggle').click(function(e){
+                                                    if (animateNbool === 0) {
+                                                    animateNbool = 1;
+                                                    $(e.currentTarget).html("Disable");
+                                                    }
+                                                    else {
+                                                    animateNbool = 0;
+                                                    $(e.currentTarget).html("Enable");
+                                                    }
+                                                    });
+                        $('#tanimationtoggle').click(function(e){
+                                                    if (animateTbool === 0) {
+                                                    animateTbool = 1;
+                                                    $(e.currentTarget).html("Disable");
+                                                    }
+                                                    else {
+                                                    animateTbool = 0;
+                                                    $(e.currentTarget).html("Enable");
+                                                    }
+                                                    });
+                        $('#canimationtoggle').click(function(e){
+                                                    if (animateCbool === 0) {
+                                                    animateCbool = 1;
+                                                    $(e.currentTarget).html("Disable");
+                                                    }
+                                                    else {
+                                                    animateCbool = 0;
+                                                    $(e.currentTarget).html("Enable");
+                                                    }
+                                                    });
+                        }
+                    
+                    </script>
             </div>
         </div>       
     </div>
@@ -79,9 +941,20 @@
             d3.select('#visualvisual3Option').style('display','none');
             d3.select('#visual'.concat(selected)).style('display','flex');
             // d3.select('table').style('display','table');
+            if (d3.select('#visualscatterOption').style('display') == 'flex') {
+                scatterStuff();
+            }
+            if (d3.select('#visualvisual3Option').style('display') == 'flex') {
+                // webGLStart();
+                visual3Stuff();
+            }
         }
         document.getElementById('visualscatterOption').style.display = 'none';
         document.getElementById('visualvisual3Option').style.display = 'none';
+
+        updateFormCheckbox();
+        getTableData();
+        updateOptions();
     </script>
 </body>
 </html>

@@ -16,7 +16,7 @@ def home():
 @app.route('/data')
 def getData():
     rows = []
-    data = db.items.find({"scrape":{"$eq":"Processors"}}).limit(100)
+    data = db.items.find({"scrape":{"$eq":"Processors"}})#.limit(100)
     for row in data:
         row.pop('_id')
         row.pop('scrape')
